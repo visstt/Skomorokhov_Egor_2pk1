@@ -1,5 +1,6 @@
-﻿using System;
-class pz_06 {
+namespace pz_06
+using System;
+class Program {
   static void Main() {
    int[] array1 = new int[10];
             int[] array2 = new int[10];
