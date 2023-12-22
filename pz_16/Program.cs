@@ -8,15 +8,18 @@ namespace PZ_16
         static bool move = true;
         static int mapSize = 25; //размер карты
         static char[,] map = new char[mapSize, mapSize]; //карта
-        //координаты на карте игрока
+                                                         //координаты на карте игрока
         static int playerY = mapSize / 2;
         static int playerX = mapSize / 2;
-        static int enemiesKill = 4;
-        static byte enemies = 4; //количество врагов
+        static int enemiesKill = 3;
+        static int boss = 1;
+        static byte enemies = 3; //количество врагов
         static byte buffs = 5; //количество усилений
         static int health = 5;  // количество аптечек   
-        static int countMove = 0;// шаги игрока
-
+        static int countMove = 0;// Шаги игрока
+        static int kills = 0;// убийства игрока
+        static int countHealth;// Счетчик подобранных аптечек
+        static int countBuffs;// Счетчик баффов
         // Параметры консоли
         static int winHeight = 40;
         static int winWidth = 100;
@@ -24,28 +27,36 @@ namespace PZ_16
         static int playerHP = 50;
         static int playerStrong = 10;
 
-        // Параметры врагов
+        // Параметры  врагов
         static int eHp = 30;
         static sbyte eStrong = 5;
 
+        // Параметры босса
+        static int bossHp = 30;
+        static int bossStrong = 10;
 
 
-        static string console = "Здесь будут выводиться ваши последние действия";
+
+        static string console = "Здесь будут выводится ваши последние действия";
         static int count = 0;
         static int newCount = 0;
 
         static void StartGame()
         {
+            Console.SetWindowSize(winWidth, winHeight);
             move = true;
-            enemies = 4;
+            enemies = 3;
             health = 5;
             buffs = 5;
             playerX = mapSize / 2;
             playerY = mapSize / 2;
-
+            countBuffs = 0;
+            countMove = 0;
+            countHealth = 0;
+            kills = 0;
             Console.Clear();
             string newGameText = ("N - начать новую игру");
-            string loadGameText = ("L - загрузить последнее сохранение");
+            string loadGameText = ("L - загрузить последнее сохранение ");
 
             int text1X = (winWidth / 2) - (winHeight / 2);
             int text1Y = (winHeight / 2) - 1;
@@ -76,9 +87,10 @@ namespace PZ_16
         }
         static string SaveGame()
         {
-            string path = @"save.txt";
+            string path = "save.txt";
             using (StreamWriter writer = new StreamWriter(path))
-            {                                                    //передаем все необходимые значения
+            {
+
                 writer.WriteLine($"playerX={playerX}");
                 writer.WriteLine($"playerY={playerY}");
                 writer.WriteLine($"playerHP={playerHP}");
@@ -87,7 +99,7 @@ namespace PZ_16
                 writer.WriteLine($"eHp={eHp}");
 
 
-                for (int i = 0; i < mapSize; i++)        // заменяем букву р на _
+                for (int i = 0; i < mapSize; i++)
                 {
                     for (int j = 0; j < mapSize; j++)
                     {
@@ -103,6 +115,7 @@ namespace PZ_16
             }
             return path;
         }
+
         static void LoadGame()
         {
             string path = "save.txt";
@@ -116,8 +129,7 @@ namespace PZ_16
                         int.TryParse(lines[2].Split('=')[1], out int loadedPlayerHP) &&
                         int.TryParse(lines[3].Split('=')[1], out int loadedPlayerStrong) &&
                         int.TryParse(lines[4].Split('=')[1], out int loadedPlayerStepCount) &&
-                        int.TryParse(lines[5].Split('=')[1], out int loadedEnemyHP) &&
-                        int.TryParse(lines[5].Split('=')[1], out int loadedEnemiesKill))
+                        int.TryParse(lines[5].Split('=')[1], out int loadedEnemyHP))
                     {
                         playerX = loadedPlayerX;
                         playerY = loadedPlayerY;
@@ -125,9 +137,6 @@ namespace PZ_16
                         playerStrong = loadedPlayerStrong;
                         countMove = loadedPlayerStepCount;
                         eHp = loadedEnemyHP;
-                        enemiesKill = loadedEnemiesKill - 27;
-
-
                         for (int i = 0; i < mapSize; i++)
                         {
                             for (int j = 0; j < mapSize; j++)
@@ -154,21 +163,20 @@ namespace PZ_16
                 }
                 else
                 {
-
                     Console.WriteLine("Ошибка чтения файла сохранения.");
                 }
             }
             else
             {
-
                 Console.WriteLine("Файл сохранения не найден.");
             }
         }
 
 
+
+
         static void Main(string[] args)
         {
-            Console.SetWindowSize(winWidth, winHeight);
             StartGame();
 
 
@@ -204,6 +212,7 @@ namespace PZ_16
                 //если ячейка пуста  - туда добавляется враг
                 if (map[x, y] == '_')
                 {
+
                     Console.ForegroundColor = ConsoleColor.Red;
                     map[x, y] = 'E';
                     enemies--; //при добавлении врагов уменьшается количество нерасставленных врагов
@@ -237,12 +246,46 @@ namespace PZ_16
 
             UpdateMap(); //отображение заполненной карты на консоли
         }
+        static void SpawnBOSS()
+        {
+            if (boss != 0)
+            {
+                Random random = new Random();
+                int x;
+                int y;
+                x = random.Next(0, mapSize - 1);
+                y = random.Next(0, mapSize - 1);
+
+                if (map[y, x] == '_')
+                {
+                    map[y, x] = 'M';
+                    Console.SetCursorPosition(x, y);
+                    Console.ForegroundColor = ConsoleColor.DarkRed;
+                    Console.Write('M');
+                    Console.SetCursorPosition(30, 4);
+                    Console.Write("Буквой M на карте обозначен БОСС");
+                    Console.ForegroundColor = ConsoleColor.White;
+                    boss--;
+                }
+            }
+        }
         static void Health()
         {
+            for (int i = 0; i < 3; i++) // Перебор символов анимации
+            {
+                Console.SetCursorPosition(playerY, playerX);
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.Write('+');
+                Thread.Sleep(60);
+                Console.SetCursorPosition(playerY, playerX);
+                Console.Write('x');
+                Thread.Sleep(60);
 
+                Console.ForegroundColor = ConsoleColor.White;
+            }
 
             playerHP = 50;
-
+            countHealth++;
         }
         static void BuffUp()
         {
@@ -250,11 +293,25 @@ namespace PZ_16
 
             if (map[playerX, playerY] == 'B')
             {
-                playerStrong *= 2;
+                for (int i = 0; i < 3; i++) // Перебор символов анимации
+                {
+                    Console.SetCursorPosition(playerY, playerX);
+                    Console.ForegroundColor = ConsoleColor.Blue;
+                    Console.Write('/');
+                    Thread.Sleep(60);
+                    Console.SetCursorPosition(playerY, playerX);
+                    Console.Write('-');
+                    Thread.Sleep(60);
 
+                    Console.ForegroundColor = ConsoleColor.White;
+                }
+
+
+                playerStrong *= 2;
+                countBuffs++;
                 newCount = count;
                 map[playerX, playerY] = '-';
-                console = "Вы подобрали бафф, ваш урон увеличен в 2 раза на 20 шагов";
+                console = "Вы подобрали бафф ваш урон увеличен в 2 раза на 20 шагов";
             }
 
             if (newCount == count - 20)
@@ -267,18 +324,44 @@ namespace PZ_16
         {
             while (eHp > 0 && playerHP > 0)
             {
+                for (int i = 0; i < 2; i++)
+                {
+
+
+                    Thread.Sleep(100);
+                    Console.SetCursorPosition(playerY, playerX);
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.Write('E');
+                    Console.ForegroundColor = ConsoleColor.White;
+                    Thread.Sleep(100);
+                    Console.SetCursorPosition(playerY, playerX);
+                    Console.Write('P');
+                }
+
                 eHp -= playerStrong;
                 playerHP -= eStrong;
                 Console.SetCursorPosition(0, 29);
                 Console.Write($"Здоровье игрока: {playerHP} ");
                 if (playerHP == 0)
                 {
+                    for (int i = 0; i < 1; i++)
+                    {
+
+
+                        Thread.Sleep(200);
+                        Console.SetCursorPosition(playerY, playerX);
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.Write('E');
+                        Console.ForegroundColor = ConsoleColor.White;
+
+                    }
                     GameOver();
 
                 }
                 else if (eHp == 0)
                 {
 
+                    kills++;
 
                     map[playerX, playerY] = '_';
 
@@ -289,6 +372,50 @@ namespace PZ_16
             eHp = 30;
 
         }
+        static void BOSSFight()
+        {
+            console = "Вы вступили в бой                                                ";
+            while (bossHp > 0 && playerHP > 0)
+            {
+                for (int i = 0; i < 2; i++)
+                {
+
+
+                    Thread.Sleep(300);
+                    Console.SetCursorPosition(playerY, playerX);
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.Write('M');
+                    Console.ForegroundColor = ConsoleColor.White;
+                    Thread.Sleep(299);
+                    Console.SetCursorPosition(playerY, playerX);
+                    Console.Write('P');
+                }
+                bossHp -= playerStrong;
+                playerHP -= bossStrong;
+                Console.SetCursorPosition(0, 29);
+                Console.Write($"Здоровье игрока: {playerHP} ");
+                if (playerHP <= 0)
+                {
+
+                    GameOver();
+
+                }
+                else if (bossHp <= 0)
+                {
+
+                    kills++;
+
+                    map[playerX, playerY] = '_';
+                    WinGame();
+                }
+
+            }
+
+
+
+
+
+        }
         static void GameOver()
         {
             move = false;
@@ -296,7 +423,7 @@ namespace PZ_16
             int text1X = (winWidth / 2) - (winHeight / 2) + 10;
             int text1Y = (winHeight / 2);
             Console.SetCursorPosition(text1X, text1Y);
-            string over = "ВЫ ПРОИГРАЛИ";
+            string over = "GAME OVER";
 
             Console.Write(over);
             Console.ReadLine();
@@ -315,36 +442,31 @@ namespace PZ_16
             int text1X = (winWidth / 2) - (winHeight / 2) + 10;
             int text1Y = (winHeight / 2);
             Console.SetCursorPosition(text1X, text1Y);
-            string over = "ВЫ ПОБЕДИЛИ";
+            string over = "YOU WIN";
 
             Console.Write(over);
             Console.ReadLine();
             Console.Clear();
+            move = true;
+            enemies = 5;
+            health = 5;
+            buffs = 5;
+            playerX = mapSize / 2;
+            playerY = mapSize / 2;
             StartGame();
 
             Move();
 
         }
 
+        /// <summary>
+        /// перемещение персонажа
+        /// </summary>
         static void Move()
         {
             //предыдущие координаты игрока
             int playerOldY;
             int playerOldX;
-
-            Console.SetCursorPosition(30, 1);
-            Console.ForegroundColor = ConsoleColor.Blue;
-            Console.Write("Буквой B на карте обозначены баффы");
-            Console.SetCursorPosition(30, 0);
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.Write("Буквой P на карте обозначен игрок");
-            Console.SetCursorPosition(30, 2);
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.Write("Буквой Н на карте обозначены аптечки");
-            Console.SetCursorPosition(30, 3);
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.Write("Буквой Е на карте обозначены враги");
-            Console.ForegroundColor = ConsoleColor.White;
 
 
             while (move)
@@ -368,7 +490,7 @@ namespace PZ_16
                         break;
                     case ConsoleKey.DownArrow:
                         playerX++;
-                        if (playerX >= mapSize) playerX = mapSize - 1;
+                        if (playerX >= mapSize - 2) playerX = mapSize - 2;
                         else countMove++;
                         break;
                     case ConsoleKey.LeftArrow:
@@ -387,7 +509,7 @@ namespace PZ_16
                         int text1X = (winWidth / 2) - (winHeight / 2) + 10;
                         int text1Y = (winHeight / 2);
                         Console.SetCursorPosition(text1X, text1Y);
-                        Console.Write("Игра сохранена");
+                        Console.Write("rИгра сохранена");
                         int text2X = (winWidth / 2) - (winHeight / 2) + 10;
                         int text2Y = (winHeight / 2) + 1;
                         Console.SetCursorPosition(text2X, text2Y);
@@ -397,11 +519,15 @@ namespace PZ_16
                 }
 
 
+
+
+
+
                 if (map[playerX, playerY] == 'H')
                 {
                     Health();
 
-                    console = "Вы подобрали аптечку, ваше здоровье востановленно               ";
+                    console = "Вы подобрали аптечку ваше здоровье востановленно               ";
 
                 }
                 if (playerX != playerOldX || playerY != playerOldY)
@@ -409,23 +535,32 @@ namespace PZ_16
                     count++;
                 }
                 BuffUp();
-
+                if (map[playerX, playerY] == 'M')
+                    BOSSFight();
                 if (map[playerX, playerY] == 'E')
                 {
                     Fight();
                     console = "Вы вступили в бой                                               ";
+
                     enemiesKill--;
                 }
 
-                if (enemiesKill <= 0)
+                if (enemiesKill == 0)
                 {
-                    WinGame();
+                    SpawnBOSS();
+
+                    enemiesKill++;
                 }
 
 
 
 
-                Console.CursorVisible = false; //скрытный курсор
+
+
+
+
+
+                Console.CursorVisible = false; //скрытный курсов
 
                 Console.SetCursorPosition(0, 28);
                 Console.Write($"Шагов сделано: {countMove} ");
@@ -438,10 +573,12 @@ namespace PZ_16
 
 
 
+
                 //предыдущее положение игрока затирается
                 map[playerOldY, playerOldX] = '_';
                 Console.SetCursorPosition(playerOldY, playerOldX);
                 Console.Write('_');
+
                 //обновленное положение игрока
                 map[playerY, playerX] = 'P';
                 Console.SetCursorPosition(playerY, playerX);
@@ -450,7 +587,9 @@ namespace PZ_16
 
             }
         }
-
+        /// <summary>
+        /// вывод карты на консоль
+        /// </summary>
         static void UpdateMap()
         {
             Console.Clear();
@@ -473,10 +612,21 @@ namespace PZ_16
                     Console.Write(map[i, j]);
                     Console.ForegroundColor = ConsoleColor.White;
 
+
                 }
+
                 Console.WriteLine(map[i, 0]);
 
+            }
+            for (int i = 0; i < mapSize - 1; i++)
+            {
+                if (map[24, i] != '_')
+                {
+                    Console.SetCursorPosition(24, i);
+                    Console.Write('_');
+                }
             }
         }
     }
 }
+
